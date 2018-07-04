@@ -4,20 +4,25 @@ from .layers import fc;
 
 def LeNet(settings={}):
     net_dict={};
-    if 'batch_size' in setttings.keys():
+    epoch_len = settings['epoch_len'];
+    if 'batch_size' in settings.keys():
         batch_size = settings['batch_size'];
     else:
         batch_size = 32;
-    if 'imgH' in setttings.keys():
+    if 'imgH' in settings.keys():
         h = settings['imgH'];
     else:
         h = 28;
-    if 'imgW' in setttings.keys():
+    if 'imgW' in settings.keys():
         w = settings['imgW'];
     else:
         w = 28;
-    if 'yDim' in setttings.keys():
-        w = settings['yDim'];
+    if 'imgC' in settings.keys():
+        c = settings['imgC'];
+    else:
+        c = 1;
+    if 'yDim' in settings.keys():
+        yDim = settings['yDim'];
     else:
         yDim = 10;
     x2D = tf.placeholder(tf.float32,[
@@ -40,7 +45,7 @@ def LeNet(settings={}):
     pool2_shape = pool2.get_shape().as_list();
     pool2_dim = pool2_shape[1] * pool2_shape[2] * pool2_shape[3];
     pool2_reshaped = tf.reshape(pool2,[-1,pool2_dim]);
-    fc1 = fc(pool2_reshaped,512,istrain=settings['istrain'],name='fc1');
+    fc1 = fc(pool2_reshaped,1024,istrain=settings['istrain'],name='fc1');
     net_dict['fc1']=fc1;
     y = fc(fc1,10,istrain=settings['istrain'],name='fc2');
     net_dict['y']=y;
@@ -50,15 +55,22 @@ def LeNet(settings={}):
     
     variable_average = tf.train.ExponentialMovingAverage(0.99,gstep);
     variable_average_op = variable_average.apply(tf.trainable_variables());
-    cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=tf.argmax(y_, 1), logits=y);
+    cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=tf.argmax(yGT, 1), logits=y);
     cross_entropy_mean = tf.reduce_mean(cross_entropy);
 
     loss = cross_entropy_mean + tf.add_n(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES));
 
-    learning_rate = tf.train.exponential_decay(0.8,global_step=gstep, decay_steps=mnist.train.num_examples / batch_size,decay_rate=0.99);
+    learning_rate = tf.train.exponential_decay(0.8,global_step=gstep, decay_steps=epoch_len,decay_rate=0.99);
     train_step = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss, global_step=gstep)
 
     with tf.control_dependencies([train_step, variable_average_op]):
         train_op = tf.no_op(name='train');
+        
+    correct_prediction = tf.equal(tf.argmax(yGT, 1), tf.argmax(y, 1));
+    accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32));
+    
+    net_dict['acc'] = accuracy;
     net_dict['opt'] = train_op;
+    
+    print('got LeNet');
     return net_dict;
