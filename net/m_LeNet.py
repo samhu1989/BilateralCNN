@@ -34,6 +34,10 @@ def LeNet(settings={}):
     net_dict['x2D'] = x2D;
     yGT = tf.placeholder(tf.float32, [None,yDim],name='yGT');
     net_dict['yGT'] = yGT;
+    dr = tf.placeholder(tf.float32,name='keeprate');
+    net_dict['keeprate'] = dr;
+    net_dict['train_sum'] = [];
+    net_dict['valid_sum'] = [];
     conv1 = conv2d(x2D,size=[5,5,1,32],name='conv1');
     net_dict['conv1'] = conv1;
     pool1 = tf.nn.max_pool(conv1, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME');
@@ -45,32 +49,43 @@ def LeNet(settings={}):
     pool2_shape = pool2.get_shape().as_list();
     pool2_dim = pool2_shape[1] * pool2_shape[2] * pool2_shape[3];
     pool2_reshaped = tf.reshape(pool2,[-1,pool2_dim]);
-    fc1 = fc(pool2_reshaped,1024,istrain=settings['istrain'],name='fc1');
+    fc1 = fc(pool2_reshaped,1024,keeprate=dr,name='fc1');
     net_dict['fc1']=fc1;
-    y = fc(fc1,10,istrain=settings['istrain'],name='fc2');
+    y = fc(fc1,10,keeprate=1.0,name='fc2');
     net_dict['y']=y;
     
     gstep = tf.Variable(0,trainable=False);
     net_dict['step']=gstep;
     
-    variable_average = tf.train.ExponentialMovingAverage(0.99,gstep);
-    variable_average_op = variable_average.apply(tf.trainable_variables());
     cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=tf.argmax(yGT, 1), logits=y);
     cross_entropy_mean = tf.reduce_mean(cross_entropy);
+    summary = tf.summary.scalar('cross_entropy',cross_entropy_mean);
+    net_dict['train_sum'].append(summary);
+    net_dict['valid_sum'].append(summary);
 
-    loss = cross_entropy_mean + tf.add_n(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES));
+    reg = 1e-4*tf.add_n(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES));
+    net_dict['reg'] = reg;
+    summary = tf.summary.scalar('reg',reg);
+    net_dict['train_sum'].append(summary);
+    net_dict['valid_sum'].append(summary);
+    
+    loss = cross_entropy_mean + reg;
+    net_dict['loss'] = loss;
+    summary = tf.summary.scalar('loss',loss);
+    net_dict['train_sum'].append(summary);
+    net_dict['valid_sum'].append(summary);
 
-    learning_rate = tf.train.exponential_decay(0.8,global_step=gstep, decay_steps=epoch_len,decay_rate=0.99);
-    train_step = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss, global_step=gstep)
-
-    with tf.control_dependencies([train_step, variable_average_op]):
-        train_op = tf.no_op(name='train');
+    train_op = tf.train.AdamOptimizer(1e-4).minimize(loss, global_step=gstep)
         
-    correct_prediction = tf.equal(tf.argmax(yGT, 1), tf.argmax(y, 1));
+    correct_prediction = tf.equal(tf.argmax(y, 1),tf.argmax(yGT, 1));
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32));
-    
     net_dict['acc'] = accuracy;
-    net_dict['opt'] = train_op;
+    summary = tf.summary.scalar('accuracy',accuracy);
+    net_dict['train_sum'].append(summary);
+    net_dict['valid_sum'].append(summary);
     
+    net_dict['opt'] = train_op;
+    net_dict['train_sum'] = tf.summary.merge(net_dict['train_sum']);
+    net_dict['valid_sum'] = tf.summary.merge(net_dict['valid_sum']);
     print('got LeNet');
     return net_dict;
