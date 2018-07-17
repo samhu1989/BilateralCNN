@@ -1,1 +1,15 @@
 \section{Experiment}
+Experiment settings \ref{tab:tab2}.
+\begin{table*}[h]
+	\centering
+	\caption{Network configurations for mesh generation from single image}\label{tab:tab2}
+	\begin{tabular}{ c | c | c }
+		2D encoder & coupling with spatial samples & 3D decoder \\
+		\hline
+		 plain CNN & replicate + concatenate & MLP \\
+		 bilateral CNN & replicate + 2-level concatenate & K-neighbor PointNet\\
+		ResNet-18 & K-neighbor PointNet & Parametric Continuous Convolution\\ 
+		bilateral ResNet-18 &  2-level K-neighbor PointNet & bilateral Parametric Continuous Convolution\\
+		& replicate + outer product &
+	\end{tabular}
+\end{table*}
