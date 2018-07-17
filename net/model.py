@@ -15,4 +15,5 @@ for pn,dns,fns in os.walk(os.path.dirname(__file__)):
                     locals()[name] = m.__getattribute__(name);
                     
 def getNet(name,settings={}):
+    print('getting '+name);
     return eval(name)(settings);

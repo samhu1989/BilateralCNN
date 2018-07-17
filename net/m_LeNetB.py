@@ -1,8 +1,9 @@
 import tensorflow as tf;
+from .bconv import bconv2d_v1 as bconv2d;
 from .layers import conv2d;
 from .layers import fc;
 
-def LeNet(settings={}):
+def LeNetB(settings={}):
     net_dict={};
     epoch_len = settings['epoch_len'];
     if 'batch_size' in settings.keys():
@@ -38,11 +39,12 @@ def LeNet(settings={}):
     net_dict['keeprate'] = dr;
     net_dict['train_sum'] = [];
     net_dict['valid_sum'] = [];
-    conv1 = conv2d(x2D,size=[5,5,1,32],name='conv1');
+    conv1 = bconv2d(x2D,size=[11,11,1,32],k=23,name='conv1');
+    #conv1 = conv2d(x2D,size=[5,5,1,32],name='conv1');
     net_dict['conv1'] = conv1;
     pool1 = tf.nn.max_pool(conv1, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME');
     net_dict['pool1'] = pool1;
-    conv2 = conv2d(pool1,size=[5,5,32,64],name='conv2');
+    conv2 = bconv2d(pool1,size=[11,11,32,64],k=23,name='conv2');
     net_dict['conv2'] = conv2;
     pool2 = tf.nn.max_pool(conv2, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME');
     net_dict['pool2'] = pool2;
@@ -87,5 +89,5 @@ def LeNet(settings={}):
     net_dict['opt'] = train_op;
     net_dict['train_sum'] = tf.summary.merge(net_dict['train_sum']);
     net_dict['valid_sum'] = tf.summary.merge(net_dict['valid_sum']);
-    print('got LeNet');
+    print('got LeNetB');
     return net_dict;
